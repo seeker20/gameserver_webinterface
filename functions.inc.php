@@ -73,10 +73,17 @@ function parse_running_vars($running){
 
 // Funktion zum bauen der connect-Zeile
 function build_connect_cmd($running){
-  $query = mysql_query("SELECT * FROM games WHERE id = '".$running["gameid"]."' LIMIT 1");
-  $game = mysql_fetch_assoc($query);
-  $query = mysql_query("SELECT * FROM server WHERE id = '".$running["serverid"]."' LIMIT 1");
-  $server = mysql_fetch_assoc($query);
+  $query = "SELECT * FROM games WHERE id = :gameid LIMIT 1";
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+  $stmt->bindValue(":gameid",$running["gameid"]);
+  $stmt->execute();
+  $game = $stmt->fetch(PDO::FETCH_ASSOC);
+  
+  $query = "SELECT * FROM server WHERE id = '".$running["serverid"]."' LIMIT 1";
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+  $stmt->bindValue(":serverid",$running["serverid"]);
+  $stmt->execute();
+  $server = $stmt->fetch(PDO::FETCH_ASSOC);
 
   $connect_cmd = $game["connect_cmd"];
   if(empty($connect_cmd)) return false;

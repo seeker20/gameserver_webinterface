@@ -21,14 +21,20 @@
 if($_SESSION["ad_level"] >= 1){
 
 $server = array();
-$query = mysql_query("SELECT * FROM server WHERE active = 1 ORDER BY name");
-while($row = mysql_fetch_assoc($query)) $server[] = $row;
+$sql = ("SELECT * FROM server WHERE active = 1 ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+$stmt->execute();
+foreach($stmt->fetchAll() as $row) $server[] = $row;
+
 
 $games = array();
-$query = mysql_query("SELECT * FROM games ORDER BY name");
-while($row = mysql_fetch_assoc($query)) $games[$row["id"]] = $row;
+$sql = ("SELECT * FROM games ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+$stmt->execute();
+foreach($stmt->fetchAll() as $row) $games[$row["id"]] = $row;
 
-if($_SESSION["ad_level"] >= 4 && $_GET["cmd"] == "cleanup"){
+
+if($_SESSION["ad_level"] >= 4 && isset($_GET['cmd'])  && $_GET["cmd"] == "cleanup"){
   // Cleanup - gestorbene Screens aus der "running"-Tabelle loeschen
   foreach($server as $s){
     $tmp = list_screens($s);
@@ -37,13 +43,13 @@ if($_SESSION["ad_level"] >= 4 && $_GET["cmd"] == "cleanup"){
       if(!in_array($row["screen"],$tmp)) mysql_query("DELETE FROM running WHERE id = '".$row["id"]."' LIMIT 1");
     }
   }
-}elseif($_GET["cmd"] == "kill" && !empty($_GET["id"]) && is_numeric($_GET["id"])){
+}elseif((isset($_GET["cmd"]) && $_GET["cmd"] == "kill") && !empty($_GET["id"]) && is_numeric($_GET["id"])){
   // Gameserver killen
   kill_server(mysql_real_escape_string($_GET["id"]));
-}elseif($_GET["cmd"] == "restart" && !empty($_GET["id"]) && is_numeric($_GET["id"])){
+}elseif((isset($_GET['cmd']) && $_GET["cmd"] == "restart") && !empty($_GET["id"]) && is_numeric($_GET["id"])){
   // Gameserver restarten
   restart_server(mysql_real_escape_string($_GET["id"]));
-}elseif($_POST["kill_multi"]){
+}elseif(isset($_POST["kill_multi"])){
   // Mehrere Gameserver killen
   if(is_array($_POST["kill"])){
     foreach($_POST["kill"] as $id) kill_server($id);
@@ -88,8 +94,13 @@ foreach($server as $s){
   echo "<form id='form_$i' method='POST' action='index.php'>";
   $screens = list_screens($s); // Laufende Screen einlesen
   $scores = 0;
-  $query = mysql_query("SELECT * FROM running WHERE serverid = '".$s["id"]."' ORDER BY gameid");
-  while($row = mysql_fetch_assoc($query)){ // Games auf dem Server auflisten
+  
+  $sql = ("SELECT * FROM running WHERE serverid = :serverid ORDER BY gameid");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":serverid",$s['id']);
+  $stmt->execute();
+  
+  foreach($stmt->fetchAll() as $row){ // Games auf dem Server auflisten
     $scores += $row["score"]; // Score addieren fuer die Anzeige
     
     if(!in_array($row["screen"],$screens)) $dead = true; // Wenn Screen in running-Tabelle aber nicht auf Server: gestorben
