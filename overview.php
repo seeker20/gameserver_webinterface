@@ -23,14 +23,23 @@ if($_SESSION["ad_level"] >= 1){
 // Daten einlesen fuer Server-Statistik
 $i=0;
 $server = array();
-$query = mysql_query("SELECT * FROM server WHERE active = 1 ORDER BY name");
-while($row = mysql_fetch_assoc($query)){
+$query = ("SELECT * FROM server WHERE active = 1 ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+$stmt->execute();
+foreach($stmt->fetchAll() as $row){
   $server[$i] = $row;
   $server[$i]["online"] = host_check_login($row); // Server online?
-  $query2 = mysql_query("SELECT * FROM running WHERE serverid = '".$row["id"]."'");
-  while($row2 = mysql_fetch_assoc($query2)){ // Was laeuft auf dem Server?
-    $server[$i]["running"][$row2["gameid"]] += 1;
-    $server[$i]["score_used"] += $row2["score"];
+  $query2 = ("SELECT * FROM running WHERE serverid = :serverid");
+  $stmt2 = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query2);
+  $stmt2->bindValue(":serverid",$row['id']);
+  $stmt2->execute();
+  foreach($stmt2->fetchAll() as $row2){ // Was laeuft auf dem Server?
+      if(!isset($server[$i]["running"][$row2["gameid"]]))
+          $server[$i]["running"][$row2["gameid"]] = 0;
+      if(!isset($server[$i]["score_used"]))
+          $server[$i]["score_used"] = 0;
+      $server[$i]["running"][$row2["gameid"]]  += 1;
+      $server[$i]["score_used"] += $row2["score"];
   }
   $i++;
 }
