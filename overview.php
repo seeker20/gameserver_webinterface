@@ -46,8 +46,10 @@ foreach($stmt->fetchAll() as $row){
 
 // Games einlesen
 $games = array();
-$query = mysql_query("SELECT * FROM games");
-while($row = mysql_fetch_assoc($query)){
+$query = ("SELECT * FROM games");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+$stmt->execute();
+foreach($stmt->fetchAll() as $row){
   $games[$row["id"]] = $row;
 }
 
@@ -99,8 +101,11 @@ foreach($games as $g){
   echo "  <tr>";
   echo "    <th colspan='2' width='100'><img src='images/".$g["icon"]."' height='$image_height'> ".$g["name"]."</th>";
   echo "  </tr>";
-  $query = mysql_query("SELECT COUNT(r.id) AS count, s.name AS name FROM running AS r, server AS s WHERE r.serverid = s.id AND r.gameid = '".$g["id"]."' GROUP BY s.name ORDER BY s.name");
-  while($row = mysql_fetch_assoc($query)){ // Server auflisten
+  $query = ("SELECT COUNT(r.id) AS count, s.name AS name FROM running AS r, server AS s WHERE r.serverid = s.id AND r.gameid = :gameid GROUP BY s.name ORDER BY s.name");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+  $stmt->bindValue(":gameid",$g['id']);
+  $stmt->execute();
+  foreach($stmt->fetchAll() as $row){ // Server auflisten
     echo "<tr>";
     echo "  <td width='20'>".$row["count"]."x</td>";
     echo "  <td>".$row["name"]."</td>";
