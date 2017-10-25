@@ -255,18 +255,21 @@ function restart_server($running_id){
 
 // Funktion zum Auflisten aller Server, denen ein bestimmtes Game zugewiesen ist
 function get_server_with_game($gameid){
-  global $db;
-
-  $query = mysql_query("SELECT * FROM server WHERE active = 1 AND (games LIKE '".$gameid."' OR games LIKE '".$gameid.",%' OR games LIKE '%,".$gameid.",%' OR games LIKE '%,".$gameid."') ORDER BY name",$db);
-  return $query;
+    $query = ("SELECT * FROM server WHERE active = 1 AND games LIKE :gameid");// AND (games LIKE ':gameid' OR games LIKE ':gameid,%' OR games LIKE '%,:gameid,%' OR games LIKE '%,:gameid') ORDER BY name");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+  $stmt->bindValue(":gameid",$gameid);
+  $stmt->execute();
+  
+  //echo $stmt->rowCount();
+  //exit();
+  return $stmt;
 }
 
 // Funktion zum pruefen, ob der Login zum Server moeglich ist
 function host_check_login($server){
   global $ssh_string;
   exec("$ssh_string ".$server["user"]."@".$server["ip"]." \"exit 0\"",$retarr,$rc);
-  if($rc == 0) return true;
-  else return false;
+  return $rc == 0;
 }
 
 // Funktion zum pruefen, ob der Server per Ping erreichbar ist

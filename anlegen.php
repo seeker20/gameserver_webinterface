@@ -115,10 +115,16 @@ if(isset($_GET["game"])){
       <td>Zielserver:</td>
       <td><select name='server'>";
 $query = get_server_with_game($game["id"]); // Zeigt nur die Server an, auf denen das Game laeuft ...
-while($row = mysql_fetch_assoc($query)){
+foreach($query->fetchAll() as $row){
+  
   if(host_check_login($row)){ // ... und auch nur wenn der Server online ist
     echo "<option value='".$row["id"]."' ";
-    $score_used = mysql_result(mysql_query("SELECT SUM(score) AS score FROM running GROUP BY serverid HAVING serverid = '".$row["id"]."'"),0,"score");
+    $sql =("SELECT SUM(score) AS score FROM running GROUP BY serverid HAVING serverid =:id");
+    $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+    $stmt->bindValue(":id",$row['id']);
+    $stmt->execute();
+    $nrow = $stmt->fetch();
+    $score_used = $nrow["score"];
     if(($row["score"]-$score_used) < $game["score"]) echo "disabled"; // Wenn der Score zu hoch ist, Server ausgrauen
     echo ">".$row["name"]."</option>";
   }
