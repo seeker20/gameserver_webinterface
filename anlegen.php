@@ -31,7 +31,7 @@ if(isset($_POST["anlegen"])){
     $stmt->execute();
     $game = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    $query = mysql_query("SELECT * FROM server WHERE id = :server LIMIT 1");
+    $query = ("SELECT * FROM server WHERE id = :server LIMIT 1");
     $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
     $stmt->bindValue(":server",$_POST["server"]);
     $stmt->execute();
@@ -46,8 +46,11 @@ if(isset($_POST["anlegen"])){
         // Werden Token verwendet und gibt es einen freien?
         $token = "";
         if($game["token_pool"] > 0){
-          $query = mysql_query("SELECT * FROM token WHERE id = '".$game["token_pool"]."' LIMIT 1");
-          $token_pool = mysql_fetch_assoc($query);
+          $query = ("SELECT * FROM token WHERE id = :tokenpool LIMIT 1");
+          $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+          $stmt->bindValue(":tokenpool",$game["token_pool"]);
+          $stmt->execute();
+          $token_pool = $stmt->fetch();
           $token = get_token($token_pool);
         }
         if($token === false) echo "<div class='meldung_error'>Alle Token bereits vergeben - keinen freien Token gefunden.</div><br>";
@@ -77,7 +80,19 @@ if(isset($_POST["anlegen"])){
             echo "<div class='meldung_error'>Server konnte nicht gestartet werden.</div><br>";
           }else{
             // Und in die "running"-Tabelle einfuegen
-            mysql_query("INSERT INTO running SET screen = '".$screen."', serverid = '".$server["id"]."', gameid = '".$game["id"]."', port = '".$port."', cmd = '".str_replace("'","\'",$cmd)."', score = '".$game["score"]."', token_pool = '".$token_pool["id"]."', token = '".$token."', vars = '".str_replace("'","\'",$values)."'");
+            $sql = ("INSERT INTO running SET screen = :screen, serverid = :serverid, gameid = :gameid, port = :port, cmd = :cmd, score = :score, token_pool = :tokenID, token = :token, vars = :values");
+            
+            $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+            $stmt->bindValue(":screen",$screen);
+            $stmt->bindValue(":serverid",$server['id']);
+            $stmt->bindValue(":gameid",$game['id']);
+            $stmt->bindValue(":port",$port);
+            $stmt->bindValue(":cmd",str_replace("'","\'",$cmd));
+            $stmt->bindValue(":score",$game['score']);
+            $stmt->bindValue(":tokenID",$token_pool['id']);
+            $stmt->bindValue(":token",$token);
+            $stmt->bindValue(":values",str_replace("'","\'",$values));
+            $stmt->execute();
             echo "<div class='meldung_ok'>Server erfolgreich gestartet.</div><br>";
           }
           unlink($tmp_dir."/".$server["ip"]."_".$port); // Lockfile loeschen
