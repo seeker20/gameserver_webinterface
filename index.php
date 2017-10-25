@@ -22,7 +22,7 @@ require("config.inc.php");
 require("functions.inc.php");
 
 // Logout
-if($_GET["logout"]){
+if(isset($_GET["logout"])){
   session_destroy();
   session_start();
   $_SESSION["ad_level"] = 0;
@@ -42,16 +42,24 @@ if($_GET["logout"]){
 <body>
 
 <?php
-if($_POST["submit_login"]){
+if(isset($_POST["submit_login"])){
   // Login
-  if(empty($_POST["submit_login"]) || empty($_POST["pw"])) echo "<div class='meldung_error'>Nicht alle Felder angegeben.</div><br>";
+  if(empty($_POST["login"]) || empty($_POST["pw"])) echo "<div class='meldung_error'>Nicht alle Felder angegeben.</div><br>";
   else{
-    $query = mysql_query("SELECT id, name, ad_level FROM user WHERE LOWER(login) = LOWER('".mysql_escape_string($_POST["login"])."') AND pw = '".sha1($_POST["pw"])."' LIMIT 1");
-    if(mysql_num_rows($query) == 1){
-      $_SESSION["user_id"] = mysql_result($query,0,"id");
-      $_SESSION["user_name"] = mysql_result($query,0,"name");
-      $_SESSION["ad_level"] = mysql_result($query,0,"ad_level");
-      $logged_in = true;
+      //$login = $_POST['login'];
+      //  $pw = sha1($_POST['pw']);
+    $sql = "SELECT id, name, ad_level FROM user WHERE LOWER(login) = LOWER(:login) AND pw = :pw LIMIT 1";
+    $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+    $stmt->bindValue(":login",$_POST['login']);
+    $stmt->bindValue(":pw",sha1($_POST['pw']));
+    $stmt->execute();
+    
+    if($stmt->rowCount() == 1){
+        $row = $stmt->fetch();
+        $_SESSION["user_id"] = $row['id'];
+        $_SESSION["user_name"] = $row['name'];
+        $_SESSION["ad_level"] = $row['ad_level'];
+        $logged_in = true;
       if($_POST["pw"] == $default_pw) $set_pw = true; // Wenn das das default-pw war, dann aendern
     }else{ // try SOAP to dotlan
       $soap_client = soap_connect($_POST["login"],$_POST["pw"]);
@@ -69,7 +77,7 @@ if($_POST["submit_login"]){
       }
     }
   }
-}elseif($_POST["submit_pw"]){
+}elseif(isset($_POST["submit_pw"])){
   // default-PW aendern
   if(empty($_POST["pw1"]) || empty($_POST["pw2"])){
     echo "<div class='meldung_error'>Nicht alles ausgef&uuml;llt.</div><br>";
@@ -77,8 +85,12 @@ if($_POST["submit_login"]){
   }elseif($_POST["pw1"] != $_POST["pw2"]){
     echo "<div class='meldung_error'>PWs stimmen nicht &uuml;berein.</div><br>";
     $set_pw = true;
-  }else{
-    mysql_query("UPDATE user SET pw = '".sha1($_POST["pw1"])."' WHERE id = '".$_SESSION["user_id"]."' LIMIT 1");
+  }else{ 
+    $sql = "UPDATE user SET pw = :pw WHERE id = :userid LIMIT 1";
+    $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+    $stmt->bindValue(":pw",sha1($_POST["pw2"]));
+    $stmt->bindValue(":userid",$_SESSION['user_id']);
+    $stmt->execute();
   }
 }
 
@@ -102,7 +114,7 @@ if(!$logged_in){
     </tr>
   </table>
   </form>";
-}elseif($set_pw){
+}elseif(isset($set_pw) && $set_pw == true){
   // Default-PW aendern
   echo "<form action='index.php' method='POST'>
   <table>
@@ -133,7 +145,8 @@ if(!$logged_in){
   echo " | <a class='navi' href='index.php?logout=true'>Logout</a>";
   echo "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <font style='font-size: 10px'>Gameserver Webinterface by <a style='color:#FFFFFF; font-size: 10px;' href='http://www.amshove.net/'>Torsten Amshove</a></font>";
   echo "</div>";
-  switch($_GET["page"]){
+  $page = isset($_GET['page']) ? $_GET['page'] : "";
+  switch($page){
     case "anlegen": include("anlegen.php"); break;
     case "overview": include("overview.php"); break;
     case "server": include("server.php"); break;

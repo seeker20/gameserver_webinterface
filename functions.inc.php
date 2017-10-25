@@ -17,6 +17,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc., #
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.             #
 ###########################################################################
+require("database.class.php");
+require("core.class.php");
 
 // Bezeichnungen der admin-level
 $ad_level = array(
@@ -32,8 +34,11 @@ $ssh_string = "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=1 -i $ssh_priv_
 $tmp_dir = sys_get_temp_dir();
 
 // Mit MySQL verbinden
-$db = mysql_connect($mysql_host,$mysql_user,$mysql_pw) or die(mysql_error());
-mysql_select_db($mysql_db) or die(mysql_error());
+$db = new Database("mysql",$mysql_host,$mysql_user,$mysql_pw);
+$db->changeDatabase($mysql_db);
+
+$core = new Core();
+$core->setInterfaceDB($db);
 
 // Session starten
 session_start();

@@ -21,7 +21,7 @@
 // MySQL-Settings
 $mysql_host = "localhost";
 $mysql_user = "gameserver";
-$mysql_pw = "";
+$mysql_pw = "gameserver";
 $mysql_db = "gameserver";
 
 // SSH-Settings
