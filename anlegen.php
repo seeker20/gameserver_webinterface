@@ -20,15 +20,23 @@
 
 if($_SESSION["ad_level"] >= 1){
 
-if($_POST["anlegen"]){
+if(isset($_POST["anlegen"])){
   // Game starten
   if($_POST["server"] <= 0){
     echo "<div class='meldung_error'>Es wurde kein Server ausgew&auml;hlt, auf dem das Game gestartet werden soll. Wenn kein Server ausgew&auml;hlt werden konnte, sind vermutlich alle Server voll.</div><br>";
   }else{
-    $query = mysql_query("SELECT * FROM games WHERE id = '".mysql_real_escape_string($_POST["game"])."' LIMIT 1");
-    $game = mysql_fetch_assoc($query);
-    $query = mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_POST["server"])."' LIMIT 1");
-    $server = mysql_fetch_assoc($query);
+    $query = ("SELECT * FROM games WHERE id = :game LIMIT 1");
+    $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+    $stmt->bindValue(":game",$_POST["game"]);
+    $stmt->execute();
+    $game = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $query = mysql_query("SELECT * FROM server WHERE id = :server LIMIT 1");
+    $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+    $stmt->bindValue(":server",$_POST["server"]);
+    $stmt->execute();
+    $server = $stmt->fetch(PDO::FETCH_ASSOC);
+    
     $port = get_port($server,$game["start_port"],$game["port_blacklist"]); // Port ermitteln - erster freier Port ab start_port
     if(!$port) echo "<div class='meldung_error'>Konnte keinen freien Port finden - Server erreichbar?</div><br>";
     else{
@@ -81,17 +89,22 @@ if($_POST["anlegen"]){
 }
 
 // Auflisten der Games
-$query = mysql_query("SELECT id, icon, name FROM games ORDER BY name");
-while($row = mysql_fetch_assoc($query)){
+$query = ("SELECT id, icon, name FROM games ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+$stmt->execute();
+foreach($stmt->fetchAll() as $row){
   echo "<a href='index.php?page=anlegen&game=".$row["id"]."'><img src='images/".$row["icon"]."' height='$image_height'> ".$row["name"]."</a><br>";
 }
 
 echo "<br>";
 
 // Wenn ein Game angeklickt wurde, Formular anzeigen
-if($_GET["game"]){
-  $query = mysql_query("SELECT * FROM games WHERE id = '".mysql_real_escape_string($_GET["game"])."' LIMIT 1");
-  $game = mysql_fetch_assoc($query);
+if(isset($_GET["game"])){
+  $query = ("SELECT * FROM games WHERE id = :game LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+  $stmt->bindValue(":game",$_GET['game']);
+  $stmt->execute();
+  $game = $stmt->fetch(PDO::FETCH_ASSOC);
 
   if($game["active"] == 0) echo "<div class='meldung_error'>Das Game ist deaktiviert - hier bastelt gerade jemand - dieses Game bitte nur f&uuml;r Testzwecke starten!</div><br>";
 
@@ -105,7 +118,7 @@ $query = get_server_with_game($game["id"]); // Zeigt nur die Server an, auf dene
 while($row = mysql_fetch_assoc($query)){
   if(host_check_login($row)){ // ... und auch nur wenn der Server online ist
     echo "<option value='".$row["id"]."' ";
-    $score_used = @mysql_result(mysql_query("SELECT SUM(score) AS score FROM running GROUP BY serverid HAVING serverid = '".$row["id"]."'"),0,"score");
+    $score_used = mysql_result(mysql_query("SELECT SUM(score) AS score FROM running GROUP BY serverid HAVING serverid = '".$row["id"]."'"),0,"score");
     if(($row["score"]-$score_used) < $game["score"]) echo "disabled"; // Wenn der Score zu hoch ist, Server ausgrauen
     echo ">".$row["name"]."</option>";
   }
