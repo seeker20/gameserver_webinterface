@@ -25,24 +25,24 @@ $submit_name = "add";
 $submit_value = "Hinzuf&uuml;gen";
 $display = "none";
 
-if($_GET["cmd"] == "edit" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+if( (isset($_GET["cmd"]) && $_GET['cmd'] == "edit") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Es wurde auf edit geklickt - hier werden die Daten fuer das Formular eingelesen
   $submit_name = "edit";
   $submit_value = "&Auml;ndern";
   $display = "block";
   $value = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
-}elseif($_GET["cmd"] == "del" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "del") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server loeschen
   mysql_query("DELETE FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1");
   mysql_query("DELETE FROM running WHERE serverid = '".mysql_real_escape_string($_GET["id"])."'");
-}elseif($_GET["cmd"] == "active" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "active") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server aktivieren / deaktivieren
   mysql_query("UPDATE server SET active = IF(active = 0, 1, 0) WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1");
-}elseif($_GET["cmd"] == "access" && is_numeric($_GET["id"]) && !empty($_GET["id"]) && !empty($_POST["pw"])){
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "access") && is_numeric($_GET["id"]) && !empty($_GET["id"]) && !empty($_POST["pw"])){
   // Zugang einrichten
   $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
   install_access($server,$_POST["pw"]);
-}elseif($_GET["cmd"] == "access" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "access") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Passwort abfragen um den Zugang einzurichten
   $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
   echo "<div class='meldung_notify'>";
@@ -50,22 +50,22 @@ if($_GET["cmd"] == "edit" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   echo "<form action='index.php?page=server&cmd=access&id=".$_GET["id"]."' method='POST'>";
   echo "Passwort f&uuml;r <b>".$server["user"]."@".$server["ip"]." (".$server["name"].")</b>: <input type='password' name='pw' size='10'><input type='submit' value='Zugang einrichten'>";
   echo "</form></div><br>";
-}elseif($_GET["cmd"] == "reboot" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "reboot") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server rebooten
   $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
   reboot_server($server);
-}elseif($_GET["cmd"] == "shutdown" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "shutdown") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server herunterfahren
   $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
   shutdown_server($server);
-}elseif($_GET["cmd"] == "shutdown_all"){
+}elseif( isset($_GET["cmd"]) && $_GET['cmd'] == "shutdown_all"){
   // Alle Server herunterfahren
   $query = mysql_query("SELECT * FROM server");
   while($row = mysql_fetch_assoc($query)) shutdown_server($row);
 }
 
 // Formular wurde abgeschickt
-if($_POST["add"] || $_POST["edit"]){
+if(isset($_POST["add"]) || isset($_POST["edit"])){
   if(empty($_POST["ip"]) || empty($_POST["name"]) || empty($_POST["user"])){
     echo "<div class='meldung_error'>IP, User und Name m&uuml;ssen angegeben werden!</div><br>";
     $display = "block";
