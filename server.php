@@ -30,17 +30,36 @@ if( (isset($_GET["cmd"]) && $_GET['cmd'] == "edit") && is_numeric($_GET["id"]) &
   $submit_name = "edit";
   $submit_value = "&Auml;ndern";
   $display = "block";
-  $value = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
+  $query = ("SELECT * FROM server WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  $value = $stmt->fetch();
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "del") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server loeschen
-  mysql_query("DELETE FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1");
-  mysql_query("DELETE FROM running WHERE serverid = '".mysql_real_escape_string($_GET["id"])."'");
+  $sql = ("DELETE FROM server WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  
+  $sql = ("DELETE FROM running WHERE serverid = :id");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "active") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server aktivieren / deaktivieren
-  mysql_query("UPDATE server SET active = IF(active = 0, 1, 0) WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1");
+  $sql = ("UPDATE server SET active = IF(active = 0, 1, 0) WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "access") && is_numeric($_GET["id"]) && !empty($_GET["id"]) && !empty($_POST["pw"])){
   // Zugang einrichten
-  $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
+  $sql = ("SELECT * FROM server WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  $server = $stmt->fetch();
   install_access($server,$_POST["pw"]);
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "access") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Passwort abfragen um den Zugang einzurichten
@@ -52,16 +71,26 @@ if( (isset($_GET["cmd"]) && $_GET['cmd'] == "edit") && is_numeric($_GET["id"]) &
   echo "</form></div><br>";
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "reboot") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server rebooten
-  $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
+  $sql = ("SELECT * FROM server WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  $server = $stmt->fetch();
   reboot_server($server);
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "shutdown") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Server herunterfahren
-  $server = mysql_fetch_assoc(mysql_query("SELECT * FROM server WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
+  $sql = ("SELECT * FROM server WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  $server = $stmt->fetch();
   shutdown_server($server);
 }elseif( isset($_GET["cmd"]) && $_GET['cmd'] == "shutdown_all"){
   // Alle Server herunterfahren
-  $query = mysql_query("SELECT * FROM server");
-  while($row = mysql_fetch_assoc($query)) shutdown_server($row);
+  $sql = ("SELECT * FROM server");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->execute();
+  foreach($stmt->fetchAll() as $row) shutdown_server($row);
 }
 
 // Formular wurde abgeschickt
@@ -76,7 +105,6 @@ if(isset($_POST["add"]) || isset($_POST["edit"])){
       $display = "block";
     }
   }else{
-      print_r($_POST);
     $id = mysql_real_escape_string($_POST["id"]);
     $name = mysql_real_escape_string($_POST["name"]);
     $ip = mysql_real_escape_string($_POST["ip"]);
@@ -95,7 +123,7 @@ if(isset($_POST["add"]) || isset($_POST["edit"])){
     }
   }
 }
-if(isset($value))
+if(isset($value) && isset($value['games']))
 if(!is_array($value["games"])) $value["games"] = explode(",",$value["games"]); // Wenn aus DB ausgelesen, ist das noch kein Array
 
 // Formular
