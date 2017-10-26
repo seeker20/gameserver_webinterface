@@ -70,12 +70,13 @@ if(isset($_POST["add"]) || isset($_POST["edit"])){
     echo "<div class='meldung_error'>IP, User und Name m&uuml;ssen angegeben werden!</div><br>";
     $display = "block";
     $value = $_POST;
-    if($_POST["edit"]){
+    if(isset($_POST["edit"])){
       $submit_name = "edit";
       $submit_value = "&Auml;ndern";
       $display = "block";
     }
   }else{
+      print_r($_POST);
     $id = mysql_real_escape_string($_POST["id"]);
     $name = mysql_real_escape_string($_POST["name"]);
     $ip = mysql_real_escape_string($_POST["ip"]);
@@ -94,35 +95,42 @@ if(isset($_POST["add"]) || isset($_POST["edit"])){
     }
   }
 }
+if(isset($value))
 if(!is_array($value["games"])) $value["games"] = explode(",",$value["games"]); // Wenn aus DB ausgelesen, ist das noch kein Array
 
 // Formular
 echo "<a href='#' onClick='document.getElementById(\"formular\").style.display = \"block\";'>Server hinzuf&uuml;gen</a><br>";
 
+$id   = isset($value['id']) ? $value['id'] : "";
+$name = isset($value['name']) ? $value['name'] : "";
+$ip   = isset($value['ip']) ? $value['ip'] : "";
+$user = isset($value['user']) ? $value['user'] : "";
+
 echo "<form action='index.php?page=server' method='POST' id='formular' style='display: $display;'>
-<input type='hidden' name='id' value='".$value["id"]."'>
+<input type='hidden' name='id' value='".$id."'>
 <table>
   <tr>
     <th colspan='2'>&nbsp;</th>
   </tr>
   <tr>
     <td>Name:</td>
-    <td><input type='text' name='name' value='".$value["name"]."'></td>
+    <td><input type='text' name='name' value='".$name."'></td>
   </tr>
   <tr>
     <td width='50'>IP:</td>
-    <td><input type='text' name='ip' value='".$value["ip"]."'></td>
+    <td><input type='text' name='ip' value='".$ip."'></td>
   </tr>
   <tr>
     <td width='50'>User:</td>
-    <td><input type='text' name='user' value='".$value["user"]."'></td>
+    <td><input type='text' name='user' value='".$user."'></td>
   </tr>
   <tr>
     <td>Games:</td>
     <td><select name='games[]' size=5 multiple>";
 $games = array();
-$query = mysql_query("SELECT id, icon, name FROM games ORDER BY name");
-while($row = mysql_fetch_assoc($query)){
+$query = ("SELECT id, icon, name FROM games ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+foreach($stmt->fetchAll() as $row){
   $games[$row["id"]]["name"] = $row["name"];
   $games[$row["id"]]["icon"] = $row["icon"];
   echo "<option value='".$row["id"]."' ";
@@ -160,8 +168,9 @@ echo "<table class='hover_row'>
     <th width='200'>&nbsp;</th>
   </tr>";
 
-$query = mysql_query("SELECT * FROM server ORDER BY name");
-while($row = mysql_fetch_assoc($query)){
+$query = ("SELECT * FROM server ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($query);
+foreach($stmt->fetchAll() as $row){
   $ping_color = "#FF0000";
   $login_color = "#FF0000";
   if($row["active"] == 1 && host_check_ping($row)){
