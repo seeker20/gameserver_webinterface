@@ -30,10 +30,15 @@ if( (isset($_GET["cmd"]) && $_GET['cmd'] == "edit") && is_numeric($_GET["id"]) &
   $submit_name = "edit";
   $submit_value = "&Auml;ndern";
   $display = "block";
-  $value = mysql_fetch_assoc(mysql_query("SELECT * FROM games WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
+  $sql = ("SELECT * FROM games WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+
+  $value = $stmt->fetch();
   $query = get_server_with_game($value["id"]);
   $value["server"] = array();
-  while($row = mysql_fetch_assoc($query)) $value["server"][] = $row["id"];
+  foreach($stmt->fetchAll() as $row) $value["server"][] = $row["id"];
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "active") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Game aktivieren / deaktivieren
   mysql_query("UPDATE games SET active = IF(active = 0, 1, 0) WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1");
@@ -51,12 +56,15 @@ if( (isset($_GET["cmd"]) && $_GET['cmd'] == "edit") && is_numeric($_GET["id"]) &
 }elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "sync") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Game Syncen - Formular
   $server = array();
-  $query = mysql_query("SELECT * FROM server WHERE active = 1 ORDER BY name",$db);
-  while($row = mysql_fetch_assoc($query)) $server[] = $row;
+  $sql =  ("SELECT * FROM server WHERE active = 1 ORDER BY name");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->execute();
+  foreach($stmt->fetchAll() as $row) $server[] = $row;
 
   $server_mit_game = array();
-  $query = get_server_with_game(mysql_real_escape_string($_GET["id"]));
-  while($row = mysql_fetch_assoc($query)) $server_mit_game[] = $row;
+  $query = get_server_with_game($_GET["id"]);
+  
+  foreach($query->fetchAll() as $row) $server_mit_game[] = $row;
 
   echo "<form action='index.php?page=games' method='POST'>";
   echo "<input type='hidden' name='gameid' value='".$_GET["id"]."'>";
