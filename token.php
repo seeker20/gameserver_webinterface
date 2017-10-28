@@ -25,21 +25,32 @@ $submit_name = "add";
 $submit_value = "Hinzuf&uuml;gen";
 $display = "none";
 
-if($_GET["cmd"] == "edit" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+if( (isset($_GET["cmd"]) && $_GET['cmd'] == "edit") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Es wurde auf edit geklickt - hier werden die Daten fuer das Formular eingelesen
   $submit_name = "edit";
   $submit_value = "&Auml;ndern";
   $display = "block";
-  $value = mysql_fetch_assoc(mysql_query("SELECT * FROM token WHERE id = '".mysql_real_escape_string($_GET["id"])."' LIMIT 1"));
-}elseif($_GET["cmd"] == "del" && is_numeric($_GET["id"]) && !empty($_GET["id"])){
+  $sql = ("SELECT * FROM token WHERE id = :id LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$_GET['id']);
+  $stmt->execute();
+  $value = $stmt->fetch(); 
+}elseif( (isset($_GET["cmd"]) && $_GET['cmd'] == "del") && is_numeric($_GET["id"]) && !empty($_GET["id"])){
   // Token-Pool loeschen
-  $id = mysql_real_escape_string($_GET["id"]);
-  mysql_query("UPDATE games SET token_pool = '0' WHERE token_pool = '".$id."'"); // Verweise zuruecksetzen
-  mysql_query("DELETE FROM token WHERE id = '".$id."' LIMIT 1");
+  $id = $_GET["id"];
+  $sql = ("UPDATE games SET token_pool = '0' WHERE token_pool = :id"); // Verweise zuruecksetzen
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$id);
+  $stmt->execute();
+
+  $sql = ("DELETE FROM token WHERE id = :id  LIMIT 1");
+  $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+  $stmt->bindValue(":id",$id);
+  $stmt->execute();
 }
 
 // Add/Edit Formular wurde abgeschickt
-if($_POST["add"] || $_POST["edit"]){
+if(isset($_POST["add"]) || isset($_POST["edit"])){
   $error = false;
 
   if(empty($_POST["name"])){ // Name darf nicht leer sein
@@ -50,42 +61,55 @@ if($_POST["add"] || $_POST["edit"]){
   if($error){
     $display = "block";
     $value = $_POST;
-    if($_POST["edit"]){
+    if(isset($_POST["edit"])){
       $submit_name = "edit";
       $submit_value = "&Auml;ndern";
       $display = "block";
     }
   }else{
-    $id = mysql_real_escape_string($_POST["id"]);
-    $name = mysql_real_escape_string($_POST["name"]);
-    $token = mysql_real_escape_string($_POST["token"]);
-    if($_POST["add"]){
+    $id = isset($_POST["id"]) ? $_POST['id']: "";
+    $name = isset($_POST["name"]) ? $_POST['name'] : "";
+    $token = isset($_POST["token"]) ? $_POST['token'] : "";
+    if(isset($_POST["add"])){
       // Token-Pool anlegen
-      mysql_query("INSERT INTO token SET name = '".$name."', token = '".$token."'");
-      $id = mysql_insert_id();
-    }elseif($_POST["edit"]){
+      $sql = ("INSERT INTO token (name,token) VALUES(:name,:token)");
+      $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+      $stmt->bindValue(":name",$name);
+      $stmt->bindValue(":token",$token);
+      $stmt->execute();
+      $id = Core::getInstance()->getInterfaceDB()->getPDO()->lastInsertId();
+    }elseif(isset($_POST["edit"])){
       // Token-Pool aendern
-      mysql_query("UPDATE token SET name = '".$name."', token = '".$token."' WHERE id = '".$id."' LIMIT 1");
+        $sql = ("UPDATE token SET name = :name, token = :token WHERE id = :id LIMIT 1");
+        $stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+        $stmt->bindValue(":name",$name);
+        $stmt->bindValue(":token",$token);
+        $stmt->bindValue(":id",$id);
+        $stmt->execute();
     }
   }
 }
 
 // Formular
+
+$id    = isset($value['id']) ? $value['id'] : "";
+$name  = isset($value['name']) ? $value['name'] : "";
+$token = isset($value['token']) ? $value['token'] : "";
 echo "<a href='#' onClick='document.getElementById(\"formular\").style.display = \"block\";'>Token-Pool hinzuf&uuml;gen</a><br>";
 
 echo "<form action='index.php?page=token' method='POST' id='formular' style='display: $display;'>
-<input type='hidden' name='id' value='".$value["id"]."'>
+<input type='hidden' name='id' value='".$id."'>
 <table>
   <tr>
     <th colspan='2'>&nbsp;</th>
   </tr>
   <tr>
     <td>Name:</td>
-    <td><input type='text' name='name' value='".$value["name"]."'></td>
+    <td><input type='text' name='name' value='".$name."'></td>
   </tr>
   <tr>
     <td>Token:</td>
-    <td><textarea name='token'>".$value["token"]."</textarea><br>
+    <td><textarea name='token'>".$token."</textarea><br>
         Ein Token pro Zeile</td>
   </tr>
   <tr>
@@ -104,8 +128,11 @@ echo "<table class='hover_row'>
     <th width='100'>&nbsp;</th>
   </tr>";
 
-$query = mysql_query("SELECT * FROM token ORDER BY name");
-while($row = mysql_fetch_assoc($query)){
+$sql = ("SELECT * FROM token ORDER BY name");
+$stmt = Core::getInstance()->getInterfaceDB()->getPDO()->prepare($sql);
+$stmt->execute();
+
+foreach($stmt->fetchAll() as $row){
   echo "<tr>
     <td valign='top'>".$row["name"]."</td>
     <td>".nl2br($row["token"])."</td>
